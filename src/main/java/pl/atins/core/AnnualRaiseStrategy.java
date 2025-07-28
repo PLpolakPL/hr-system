@@ -1,4 +1,4 @@
-package pl.atins.domain.core;
+package pl.atins.core;
 
 import pl.atins.domain.Employee;
 
