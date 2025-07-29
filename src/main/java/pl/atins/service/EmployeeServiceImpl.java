@@ -3,6 +3,8 @@ package pl.atins.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pl.atins.core.EmployeeEvent;
+import pl.atins.core.EmployeeEventPublisher;
 import pl.atins.domain.Department;
 import pl.atins.domain.Employee;
 import pl.atins.dto.CreateEmployeeRequest;
@@ -29,6 +31,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final EmployeeRepository employeeRepository;
     private final DepartmentRepository departmentRepository;
     private final SalaryService salaryService;
+    private final EmployeeEventPublisher eventPublisher;
 
     @Override
     public EmployeeResponse createEmployee(CreateEmployeeRequest request) {
@@ -45,7 +48,13 @@ public class EmployeeServiceImpl implements EmployeeService {
         employee.setDepartments(new HashSet<>());
         assignDepartments(employee, request.getDepartmentIds());
 
-        return saveAndMapToResponse(employee);
+        var response = saveAndMapToResponse(employee);
+
+        var event = new EmployeeEvent(employee, EmployeeEvent.EventType.HIRED,
+                "New employee hired", null, employee);
+        eventPublisher.publishEvent(event);
+
+        return response;
     }
 
     private static void fillEmployeeDetails(CreateEmployeeRequest request, Employee employee) {
@@ -127,6 +136,11 @@ public class EmployeeServiceImpl implements EmployeeService {
     public void deleteEmployee(Long id) {
         var employee = findEmployeeById(id);
         validateEmployeeDeletion(employee);
+
+        var event = new EmployeeEvent(employee, EmployeeEvent.EventType.TERMINATED,
+                "Employee terminated", employee, null);
+        eventPublisher.publishEvent(event);
+
         employeeRepository.delete(employee);
     }
 
@@ -146,6 +160,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public EmployeeResponse promoteEmployee(Long employeeId, String newJobTitle, BigDecimal salaryAdjustment) {
         var employee = findEmployeeById(employeeId);
+        var oldJobTitle = employee.getJobTitle();
         employee.setJobTitle(newJobTitle);
 
         if (salaryAdjustment != null && salaryAdjustment.compareTo(BigDecimal.ZERO) > 0) {
@@ -153,20 +168,33 @@ public class EmployeeServiceImpl implements EmployeeService {
             salaryService.applyAdjustment(employee, strategy);
         }
 
-        return saveAndMapToResponse(employee);
+        var response = saveAndMapToResponse(employee);
+
+        var event = new EmployeeEvent(employee, EmployeeEvent.EventType.PROMOTED,
+                "Employee promoted", oldJobTitle, newJobTitle);
+        eventPublisher.publishEvent(event);
+
+        return response;
     }
 
     @Override
     public EmployeeResponse assignSupervisor(Long employeeId, Long supervisorId) {
         var employee = findEmployeeById(employeeId);
         var supervisor = findEmployeeById(supervisorId);
+        var oldSupervisor = employee.getSupervisor();
 
         validateSupervisorAssignment(employee, supervisor);
 
         employee.addSupervisor(supervisor);
         employee.setSupervisorSince(LocalDate.now());
 
-        return saveAndMapToResponse(employee);
+        var response = saveAndMapToResponse(employee);
+
+        var event = new EmployeeEvent(employee, EmployeeEvent.EventType.SUPERVISOR_ASSIGNED,
+                "Supervisor assigned", oldSupervisor, supervisor);
+        eventPublisher.publishEvent(event);
+
+        return response;
     }
 
     @Override
@@ -176,7 +204,13 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         employee.addDepartment(department);
 
-        return saveAndMapToResponse(employee);
+        var response = saveAndMapToResponse(employee);
+
+        var event = new EmployeeEvent(employee, EmployeeEvent.EventType.DEPARTMENT_CHANGED,
+                "Employee assigned to department", null, department.getName());
+        eventPublisher.publishEvent(event);
+
+        return response;
     }
 
     @Override
