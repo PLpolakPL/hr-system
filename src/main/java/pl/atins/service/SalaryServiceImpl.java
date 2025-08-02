@@ -33,6 +33,7 @@ public class SalaryServiceImpl implements SalaryService {
         return newSalary;
     }
 
+    @Override
     public SalaryAdjustmentStrategy createStrategy(String strategyType, BigDecimal amount) {
         return switch (strategyType.toLowerCase()) {
             case "annual_raise" -> new AnnualRaiseStrategy(amount);

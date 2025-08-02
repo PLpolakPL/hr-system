@@ -147,7 +147,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public BigDecimal adjustSalary(Long employeeId, SalaryAdjustmentRequest request) {
         var employee = findEmployeeById(employeeId);
-        var strategy = ((SalaryServiceImpl) salaryService).createStrategy(request.getStrategyType(),
+        var strategy = salaryService.createStrategy(request.getStrategyType(),
                 request.getAmount());
 
         if (request.getJobTitle() != null) {
@@ -164,7 +164,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         employee.setJobTitle(newJobTitle);
 
         if (salaryAdjustment != null && salaryAdjustment.compareTo(BigDecimal.ZERO) > 0) {
-            var strategy = ((SalaryServiceImpl) salaryService).createStrategy("promotion_bonus", salaryAdjustment);
+            var strategy = salaryService.createStrategy("promotion_bonus", salaryAdjustment);
             salaryService.applyAdjustment(employee, strategy);
         }
 

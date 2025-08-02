@@ -9,4 +9,6 @@ public interface SalaryService {
 
     BigDecimal applyAdjustment(Employee employee, SalaryAdjustmentStrategy strategy);
 
+    SalaryAdjustmentStrategy createStrategy(String strategyType, BigDecimal amount);
+
 }
